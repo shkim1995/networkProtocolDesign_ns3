@@ -1,14 +1,12 @@
-/*
-Network topology
 
-n0-----------------n1-----------------n2------------------n3
-   p2p 10Mbps 1ms      csma 2Mbps 1ms      p2p 10Mbps 1ms
+// Network topology
+//
+// n0-----------------n1-----------------n2------------------n3
+//    p2p 10Mbps 1ms      csma 2Mbps 1ms      p2p 10Mbps 1ms
+//
+//
 
-
-*/
-
-
-
+#define CSMA 1
 
 #include <iostream>
 #include <fstream>
@@ -35,8 +33,11 @@ int main(int argc, char *argv[]){
 	LogComponentEnable("Assignment", LOG_LEVEL_INFO);
 #endif
 
+	
+	float datarate = 1;
 
 	CommandLine cmd;
+	cmd.AddValue("datarate", "", datarate);
 	cmd.Parse(argc, argv);
 	
 
@@ -64,23 +65,32 @@ int main(int argc, char *argv[]){
 	
   	NetDeviceContainer d0d1 = p2p.Install (n0n1);
   	NetDeviceContainer d2d3 = p2p.Install (n2n3);
-	
-	p2p.EnablePcapAll("p2p");
+
+	NetDeviceContainer d1d2;
+
+#if CSMA
 
 	//CSMA: n1-n2
-	
+	cout<<"csma"<<endl;
+
 	CsmaHelper csma;
 	csma.SetChannelAttribute ("DataRate", StringValue ("2Mbps"));
   	csma.SetChannelAttribute ("Delay", StringValue ("1ms"));
-	/*
-	csma.SetChannelAttribute("DataRate", DataRateValue(DataRate("2Mbps")));
-	csma.SetChannelAttribute("Delay", TimeValue(MilliSeconds(1)));
-	*/
-	NetDeviceContainer d1d2 = csma.Install(n1n2);
+	d1d2 = csma.Install(n1n2);
 
-	csma.EnablePcapAll("csma");
+	csma.EnablePcapAll("csma"+to_string(datarate));
 
 
+#else
+	
+	cout<<"p2p"<<endl;	
+  	d1d2 = p2p.Install (n1n2);
+
+#endif
+	
+	p2p.EnablePcapAll("p2p_datarate"+to_string(datarate));
+	
+	
 	//3: Add IP Addresses
 	NS_LOG_INFO("Assign IP Addresses");
 	
@@ -114,7 +124,7 @@ int main(int argc, char *argv[]){
 	//onoff application 2
 	cout<<i1i2.GetAddress(0)<<endl;
 	OnOffHelper onoff2("ns3::UdpSocketFactory", Address(InetSocketAddress(i1i2.GetAddress(0), 9)));
-	onoff2.SetAttribute("DataRate", StringValue("1Mbps"));	
+	onoff2.SetAttribute("DataRate", StringValue(to_string(datarate)+"Mbps"));	
 	onoff2.SetAttribute("PacketSize", UintegerValue(1472));
 	onoff2.SetAttribute("OnTime", StringValue ("ns3::ConstantRandomVariable[Constant=1.0]"));
 	onoff2.SetAttribute("OffTime", StringValue ("ns3::ConstantRandomVariable[Constant=0.0]"));
