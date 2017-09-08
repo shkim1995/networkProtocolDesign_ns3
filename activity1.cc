@@ -27,7 +27,16 @@ NS_LOG_COMPONENT_DEFINE ("FirstScriptExample");
 int
 main (int argc, char *argv[])
 {
+  uint32_t maxPacket = 1;
+  float interval = 1.0;
+  uint32_t packetSize = 100;
+
   CommandLine cmd;
+
+  cmd.AddValue("maxPacket", "number of maximum packets", maxPacket);
+  cmd.AddValue("interval", "interval between two packets", interval);
+  cmd.AddValue("packetSize", "number of maximum packets", packetSize);
+  
   cmd.Parse (argc, argv);
   
   Time::SetResolution (Time::NS);
@@ -87,9 +96,9 @@ main (int argc, char *argv[])
   //install client on node 1
 
   UdpEchoClientHelper echoClient1 (interfaces1.GetAddress (1), 9);
-  echoClient1.SetAttribute ("MaxPackets", UintegerValue (1));
-  echoClient1.SetAttribute ("Interval", TimeValue(Seconds (1.0)));
-  echoClient1.SetAttribute ("PacketSize", UintegerValue (1024));
+  echoClient1.SetAttribute ("MaxPackets", UintegerValue (maxPacket));
+  echoClient1.SetAttribute ("Interval", TimeValue(Seconds(interval)));
+  echoClient1.SetAttribute ("PacketSize", UintegerValue (packetSize));
 
   ApplicationContainer clientApps1 = echoClient1.Install (nodes.Get (0));
   clientApps1.Start (Seconds (2.0));
@@ -99,14 +108,19 @@ main (int argc, char *argv[])
   //install client on node 3
 
   UdpEchoClientHelper echoClient2 (interfaces2.GetAddress (0), 9);
-  echoClient2.SetAttribute ("MaxPackets", UintegerValue (1));
-  echoClient2.SetAttribute ("Interval", TimeValue(Seconds (1.0)));
-  echoClient2.SetAttribute ("PacketSize", UintegerValue (1024));
+  echoClient2.SetAttribute ("MaxPackets", UintegerValue (maxPacket));
+  echoClient2.SetAttribute ("Interval", TimeValue(Seconds(interval)));
+  echoClient2.SetAttribute ("PacketSize", UintegerValue (packetSize));
 
   ApplicationContainer clientApps2 = echoClient2.Install (nodes.Get (2));
   clientApps2.Start (Seconds (4.0));
   clientApps2.Stop (Seconds (10.0));
-  
+ 	
+
+  //pcap tracing
+  pointToPoint1.EnablePcapAll("ptp1");
+  pointToPoint2.EnablePcapAll("ptp1");
+
   Simulator::Run ();
   Simulator::Destroy ();
   return 0;
