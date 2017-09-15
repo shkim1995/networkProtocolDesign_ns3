@@ -18,7 +18,6 @@
 #include "ns3/internet-module.h"
 #include "ns3/point-to-point-module.h"
 #include "ns3/applications-module.h"
-#include "ns3/flow-monitor-helper.h"
 #include "ns3/ipv4-global-routing-helper.h"
 #include "ns3/csma-module.h"
 
@@ -75,7 +74,9 @@ int main(int argc, char *argv[]){
 
 	CsmaHelper csma;
 	csma.SetChannelAttribute ("DataRate", StringValue ("2Mbps"));
-  	csma.SetChannelAttribute ("Delay", StringValue ("1ms"));
+  	csma.SetChannelAttribute ("Delay", StringValue ("0ms"));
+	//csma.SetQueue("ns3::DropTailQueue",  "MaxPackets", UintegerValue(30));
+	//csma.SetQueue("ns3::DropTailQueue",  "MaxPackets", UintegerValue(30));
 	d1d2 = csma.Install(n1n2);
 
 	csma.EnablePcapAll("csma"+to_string(datarate));
@@ -83,8 +84,12 @@ int main(int argc, char *argv[]){
 
 #else
 	
+	PointToPointHelper p2p2;
+ 	
+	p2p2.SetDeviceAttribute ("DataRate", StringValue ("2Mbps"));
+  	p2p2.SetChannelAttribute ("Delay", StringValue ("1ms"));
 	cout<<"p2p"<<endl;	
-  	d1d2 = p2p.Install (n1n2);
+  	d1d2 = p2p2.Install (n1n2);
 
 #endif
 	
@@ -104,7 +109,6 @@ int main(int argc, char *argv[]){
 	ipv4.SetBase("10.1.3.0", "255.255.255.0");
 	Ipv4InterfaceContainer i2i3 = ipv4.Assign(d2d3);
 
-  	Ipv4GlobalRoutingHelper::PopulateRoutingTables ();
 
 
 	//4: Set Applications
@@ -124,7 +128,7 @@ int main(int argc, char *argv[]){
 	//onoff application 2
 	cout<<i1i2.GetAddress(0)<<endl;
 	OnOffHelper onoff2("ns3::UdpSocketFactory", Address(InetSocketAddress(i1i2.GetAddress(0), 9)));
-	onoff2.SetAttribute("DataRate", StringValue(to_string(datarate)+"Mbps"));	
+	onoff2.SetAttribute("DataRate", StringValue("1Mbps"));	
 	onoff2.SetAttribute("PacketSize", UintegerValue(1472));
 	onoff2.SetAttribute("OnTime", StringValue ("ns3::ConstantRandomVariable[Constant=1.0]"));
 	onoff2.SetAttribute("OffTime", StringValue ("ns3::ConstantRandomVariable[Constant=0.0]"));
@@ -148,7 +152,9 @@ int main(int argc, char *argv[]){
   	ApplicationContainer sink_apps2 = sink2.Install (c.Get (2));
 	sink_apps2.Start (Seconds (1.0));
 
-  	NS_LOG_INFO ("Run Simulation.");
+  	Ipv4GlobalRoutingHelper::PopulateRoutingTables ();
+  	
+	NS_LOG_INFO ("Run Simulation.");
   	Simulator::Stop (Seconds (11));
   	Simulator::Run ();
 
