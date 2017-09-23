@@ -100,8 +100,7 @@ int main (int argc, char *argv[])
 	UniformDiscPositionAllocator discAlloc;
 	discAlloc.SetRho(30.0);
 	*/
-	mobilitySTA.SetPositionAllocator("ns3::UniformDiscPositionAllocator", 
-									"rho", DoubleValue(30.0));
+	mobilitySTA.SetPositionAllocator("ns3::UniformDiscPositionAllocator","rho", DoubleValue(30.0)); 
 	mobilitySTA.Install(wifiStaNodes);
 	
 	cout<<"1"<<endl;
@@ -144,9 +143,9 @@ int main (int argc, char *argv[])
 
 	Simulator::Stop (Seconds (10.0));
 
-	phy.EnablePcap ("week2_thre_"+to_string(thre)
-			        +"_nWifi"+to_string(nWifi)
-					+"_rate_"+(rate==0?"ARF" : rate==1?"CARA" : "Ideal"), apDevices.Get(0));
+	phy.EnablePcap ("week2_"+to_string(nWifi)
+			        +"_"+to_string(thre)
+					+"_"+(rate==0?"ARF" : rate==1?"CARA" : "Ideal"), apDevices.Get(0));
 
 	Simulator::Run ();
 	Simulator::Destroy ();
