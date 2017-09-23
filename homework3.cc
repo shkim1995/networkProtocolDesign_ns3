@@ -424,7 +424,7 @@ main (int argc, char *argv[])
 #if TIMING 
 #else
 	cout<<"treshold : "<<thre<<", # of UDP sources : "<<numUdp
-		<<"\nTCP : " << (TCPsize*8/10/1000000.0) 
+		<<"\nTCP : " << (TCPsize*8/(finTime-startTime)/1000000.0) 
 		<< "Mbps, UDP : " 
 		<< (UDPsize*8/(finTime-startTime)/1000000.0) << "Mbps\n\n";
 #endif	
