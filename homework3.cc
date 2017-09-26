@@ -131,7 +131,7 @@ MyApp::ScheduleTx (void)
     }
 }
 
-const int winSize = 10;
+const int winSize = 101;
 
 
 class MyQueue{
@@ -204,7 +204,7 @@ callBack1 ( Ptr<const Packet> pkt, const Address& addr){
 #if	TIMING
 	udpWin.push(Simulator::Now().GetSeconds(), pkt->GetSize());
 
-	if(udpWin.num==100){
+	if(udpWin.num==winSize){
     	NS_LOG_UNCOND (Simulator::Now ().GetSeconds () << "\t" << udpWin.bandwidth*8/1000000);
 	}
 
@@ -300,7 +300,7 @@ main (int argc, char *argv[])
     wifiStaNodes.Create (nWifi);
     NodeContainer wifiApNode = p2pNodes.Get (0);
 
-    YansWifiChannelHelper channel;
+    YansWifiChannelHelper channel = YansWifiChannelHelper::Default();
 	channel.SetPropagationDelay("ns3::ConstantSpeedPropagationDelayModel"); 
 	channel.AddPropagationLoss("ns3::JakesPropagationLossModel");
     
@@ -328,12 +328,12 @@ main (int argc, char *argv[])
 		
 	apDevices.Get(0)->TraceConnectWithoutContext ("MacTxRtsFailed", MakeCallback(&callBack3));
 	
-/*	for(uint32_t  i=0; i<nWifi; i++){
+	for(uint32_t  i=0; i<nWifi; i++){
 		Ptr<WifiRemoteStationManager> st1 = DynamicCast<WifiNetDevice> (staDevices.Get (i))->GetRemoteStationManager();  
 		st1->TraceConnectWithoutContext ("MacTxRtsFailed", MakeCallback(&callBack3));
-	}*/
-	Ptr<WifiRemoteStationManager> st1 = DynamicCast<WifiNetDevice> (staDevices.Get (0))->GetRemoteStationManager();  
-	st1->TraceConnectWithoutContext ("MacTxRtsFailed", MakeCallback(&callBack3));
+	}
+//	Ptr<WifiRemoteStationManager> st1 = DynamicCast<WifiNetDevice> (staDevices.Get (0))->GetRemoteStationManager();  
+//	st1->TraceConnectWithoutContext ("MacTxRtsFailed", MakeCallback(&callBack3));
 	
 		
 	// Set Mobility
@@ -387,7 +387,7 @@ main (int argc, char *argv[])
 	PacketSinkHelper tcpPacketSinkHelper("ns3::TcpSocketFactory", InetSocketAddress(Ipv4Address::GetAny(), tcpSinkPort));
 	ApplicationContainer tcpSinkApp = tcpPacketSinkHelper.Install(csmaNodes.Get(3));
 	tcpSinkApp.Start(Seconds(0.));
-	tcpSinkApp.Stop(Seconds(11.0));
+	tcpSinkApp.Stop(Seconds(12.0));
 
 
 	//UDP sink at Node 3
@@ -396,7 +396,7 @@ main (int argc, char *argv[])
 	PacketSinkHelper udpPacketSinkHelper("ns3::UdpSocketFactory", InetSocketAddress(Ipv4Address::GetAny(), udpSinkPort));
 	ApplicationContainer udpSinkApp = udpPacketSinkHelper.Install(csmaNodes.Get(2));
 	udpSinkApp.Start(Seconds(0.));
-	udpSinkApp.Stop(Seconds(11.0));
+	udpSinkApp.Stop(Seconds(12.0));
 
 #if TIMING	
 	if(!tcp){
@@ -440,7 +440,7 @@ main (int argc, char *argv[])
 
     Ipv4GlobalRoutingHelper::PopulateRoutingTables ();
 
-    Simulator::Stop (Seconds (10.0));
+    Simulator::Stop (Seconds (15.0));
     Simulator::Run ();
     Simulator::Destroy ();
 #if TIMING 
