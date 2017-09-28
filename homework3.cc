@@ -133,9 +133,7 @@ MyApp::ScheduleTx (void)
 
 const int winSize = 101;
 
-
 class MyQueue{
-
 public:
 
 	float time [winSize];
@@ -173,7 +171,6 @@ public:
 			int s_interval = size[(head+winSize-1)%winSize] - size[head];
 			bandwidth = s_interval / t_interval;
 			
-    		//NS_LOG_UNCOND (Simulator::Now ().GetSeconds () << "\t" << time[(head+winSize-1)%winSize] << "\t" << time[head] << "\t" << t_interval << "\t" << s_interval*8);
 			time[head] = _time;
 			size[head] = size[(head+winSize-1)%winSize]+_size;
 			head = (head+1)%winSize;
@@ -191,7 +188,7 @@ const int finTime = 7;
 
 int UDPsize = 0;
 int TCPsize = 0;
-int rxDrop = 0;
+int rtsDrop = 0;
 
 MyQueue tcpWin;
 MyQueue udpWin;
@@ -199,7 +196,7 @@ MyQueue udpWin;
 #define TIMING 0
 
 static void 
-callBack1 ( Ptr<const Packet> pkt, const Address& addr){
+udpCallBack ( Ptr<const Packet> pkt, const Address& addr){
 	
 #if	TIMING
 	udpWin.push(Simulator::Now().GetSeconds(), pkt->GetSize());
@@ -219,7 +216,7 @@ callBack1 ( Ptr<const Packet> pkt, const Address& addr){
 }
 
 static void 
-callBack2 ( Ptr<const Packet> pkt, const Address& addr){
+tcpCallBack ( Ptr<const Packet> pkt, const Address& addr){
 
 #if TIMING
 	tcpWin.push(Simulator::Now().GetSeconds(), pkt->GetSize());
@@ -238,8 +235,8 @@ callBack2 ( Ptr<const Packet> pkt, const Address& addr){
 }
 
 static void
-callBack3 (Mac48Address addr){
-	rxDrop++;
+rtsDropCallBack (Mac48Address addr){
+	rtsDrop++;
 }
 
 int 
@@ -259,10 +256,6 @@ main (int argc, char *argv[])
 	cmd.AddValue ("tcp", "0 if udp, 1 if tcp. else, both tcp and udp", tcp);
 	
 	cmd.Parse (argc,argv);
-
-    // Check for valid number of csma or wifi nodes
-    // 250 should be enough, otherwise IP addresses 
-    // soon become an issue
 
 
     // CREATE p2p Nodes
@@ -294,7 +287,7 @@ main (int argc, char *argv[])
 
 
 
-	// Create Wifi Station Nodes
+	// Create Wifi AP & Station Nodes
 
     NodeContainer wifiStaNodes;
     wifiStaNodes.Create (nWifi);
@@ -308,32 +301,25 @@ main (int argc, char *argv[])
     phy.SetChannel (channel.Create ());
 
     WifiHelper wifi;
-    wifi.SetRemoteStationManager ("ns3::ArfWifiManager",
-			"RtsCtsThreshold", UintegerValue(thre));
+    wifi.SetRemoteStationManager ("ns3::ArfWifiManager", "RtsCtsThreshold", UintegerValue(thre));
     
 	WifiMacHelper mac;
     Ssid ssid = Ssid ("ns-3-ssid");
-    mac.SetType ("ns3::StaWifiMac",
-         "Ssid", SsidValue (ssid),
-         "ActiveProbing", BooleanValue (false));
+    mac.SetType ("ns3::StaWifiMac", "Ssid", SsidValue (ssid), "ActiveProbing", BooleanValue (false));
 
     NetDeviceContainer staDevices;
     staDevices = wifi.Install (phy, mac, wifiStaNodes);
 
-    mac.SetType ("ns3::ApWifiMac",
-        "Ssid", SsidValue (ssid));
+    mac.SetType ("ns3::ApWifiMac", "Ssid", SsidValue (ssid));
 
     NetDeviceContainer apDevices;
     apDevices = wifi.Install (phy, mac, wifiApNode);
 		
-	apDevices.Get(0)->TraceConnectWithoutContext ("MacTxRtsFailed", MakeCallback(&callBack3));
-	
 	for(uint32_t  i=0; i<nWifi; i++){
 		Ptr<WifiRemoteStationManager> st1 = DynamicCast<WifiNetDevice> (staDevices.Get (i))->GetRemoteStationManager();  
-		st1->TraceConnectWithoutContext ("MacTxRtsFailed", MakeCallback(&callBack3));
+		st1->TraceConnectWithoutContext ("MacTxRtsFailed", MakeCallback(&rtsDropCallBack));
 	}
-//	Ptr<WifiRemoteStationManager> st1 = DynamicCast<WifiNetDevice> (staDevices.Get (0))->GetRemoteStationManager();  
-//	st1->TraceConnectWithoutContext ("MacTxRtsFailed", MakeCallback(&callBack3));
+
 	
 		
 	// Set Mobility
@@ -349,9 +335,10 @@ main (int argc, char *argv[])
 	// STA mobility
 
 	MobilityHelper mobilitySTA;
-	mobilitySTA.SetMobilityModel ("ns3::RandomWalk2dMobilityModel", "Bounds", RectangleValue(Rectangle(-30, 30, -30, 30)));
+	mobilitySTA.SetMobilityModel ("ns3::RandomWalk2dMobilityModel", 
+								  "Bounds", RectangleValue(Rectangle(-30, 30, -30, 30)));
 	mobilitySTA.SetPositionAllocator("ns3::UniformDiscPositionAllocator", 
-									"rho", DoubleValue(30.0));
+									 "rho", DoubleValue(30.0));
 	mobilitySTA.Install(wifiStaNodes);
 
 
@@ -389,7 +376,6 @@ main (int argc, char *argv[])
 	tcpSinkApp.Start(Seconds(0.));
 	tcpSinkApp.Stop(Seconds(12.0));
 
-
 	//UDP sink at Node 3
 	uint16_t udpSinkPort = 8081;
 	Address udpSinkAddress(InetSocketAddress(csmaInterfaces.GetAddress(2), udpSinkPort));
@@ -401,35 +387,29 @@ main (int argc, char *argv[])
 #if TIMING	
 	if(!tcp){
 		cout<<"hello"<<endl;
-    	udpSinkApp.Get(0)->TraceConnectWithoutContext ("Rx", MakeCallback(&callBack1));
+    	udpSinkApp.Get(0)->TraceConnectWithoutContext ("Rx", MakeCallback(&udpCallBack));
 	} else{
-		tcpSinkApp.Get(0)->TraceConnectWithoutContext ("Rx", MakeCallback(&callBack2));
+		tcpSinkApp.Get(0)->TraceConnectWithoutContext ("Rx", MakeCallback(&tcpCallBack));
 	}
-
 #else
-	tcpSinkApp.Get(0)->TraceConnectWithoutContext ("Rx", MakeCallback(&callBack2));
-   	udpSinkApp.Get(0)->TraceConnectWithoutContext ("Rx", MakeCallback(&callBack1));
-
+	tcpSinkApp.Get(0)->TraceConnectWithoutContext ("Rx", MakeCallback(&tcpCallBack));
+   	udpSinkApp.Get(0)->TraceConnectWithoutContext ("Rx", MakeCallback(&udpCallBack));
 #endif
 	
 	//TCP source at Node 6
 	Ptr<Socket> ns3TcpSocket = Socket::CreateSocket(wifiStaNodes.Get(0), TcpSocketFactory::GetTypeId());
-    
 	Ptr<MyApp> tcpApp = CreateObject<MyApp> ();
     tcpApp->Setup (ns3TcpSocket, tcpSinkAddress, 400, 100000, DataRate ("5Mbps"));
     wifiStaNodes.Get (0)->AddApplication (tcpApp);
     tcpApp->SetStartTime (Seconds (1.));
     tcpApp->SetStopTime (Seconds (10.));
 
-
 	//UDP source at Node 7-14
 	Ptr<Socket> ns3UdpSocket;
-	
 	Ptr<MyApp> udpApp[numUdp];	
 	
 	for(int i=1; i<numUdp+1; i++){
 		ns3UdpSocket = Socket::CreateSocket(wifiStaNodes.Get(i), UdpSocketFactory::GetTypeId());
-    
 		udpApp[i-1] = CreateObject<MyApp> ();
 		udpApp[i-1]->Setup (ns3UdpSocket, udpSinkAddress, 400, 100000, DataRate ("3Mbps"));
     	udpApp[i-1]->SetStartTime (Seconds (2.));
