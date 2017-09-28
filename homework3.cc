@@ -429,7 +429,7 @@ main (int argc, char *argv[])
 		<<"\nTCP : " << (TCPsize*8/(finTime-startTime)/1000000.0) 
 		<< "Mbps, UDP : " 
 		<< (UDPsize*8/(finTime-startTime)/1000000.0) << "Mbps\n"
-		<< "RxDrop : "<<rxDrop<<"\n\n";
+		<< "RTSDrop : "<<rtsDrop<<"\n\n";
 #endif	
 	return 0;
 }
